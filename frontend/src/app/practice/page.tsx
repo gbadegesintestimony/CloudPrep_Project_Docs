@@ -345,30 +345,30 @@ function PracticeContent() {
           )}
 
           {/* Bottom Navigation Buttons */}
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center justify-between gap-2 pt-2">
             <button
               type="button"
               onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
               disabled={currentIndex === 0}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 transition-all shadow-sm"
+              className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-slate-200 bg-white px-3 sm:px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 transition-all shadow-sm shrink-0"
             >
-              <ArrowLeft className="h-4 w-4" /> Previous
+              <ArrowLeft className="h-4 w-4" /> <span>Previous</span>
             </button>
 
             {currentIndex < questions.length - 1 ? (
               <button
                 type="button"
                 onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
-                className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-5 py-2 text-xs font-semibold text-white hover:from-sky-600 hover:to-indigo-700 shadow-md shadow-sky-500/25 transition-all cursor-pointer"
+                className="flex items-center gap-1 sm:gap-1.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-4 sm:px-5 py-2 text-xs font-semibold text-white hover:from-sky-600 hover:to-indigo-700 shadow-md shadow-sky-500/25 transition-all cursor-pointer shrink-0"
               >
-                Next Question <ArrowRight className="h-4 w-4" />
+                <span>Next</span> <span className="hidden xs:inline">Question</span> <ArrowRight className="h-4 w-4" />
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleCompleteSession}
                 disabled={submittingSession}
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-semibold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/25 transition-all cursor-pointer disabled:opacity-60"
+                className="flex items-center gap-1 sm:gap-1.5 rounded-xl bg-emerald-600 px-3.5 sm:px-5 py-2 text-xs font-semibold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/25 transition-all cursor-pointer disabled:opacity-60 shrink-0"
               >
                 {submittingSession ? (
                   <>
@@ -376,7 +376,7 @@ function PracticeContent() {
                   </>
                 ) : (
                   <>
-                    Complete Session <CheckCircle2 className="h-4 w-4" />
+                    <span>Complete</span> <span className="hidden xs:inline">Session</span> <CheckCircle2 className="h-4 w-4" />
                   </>
                 )}
               </button>

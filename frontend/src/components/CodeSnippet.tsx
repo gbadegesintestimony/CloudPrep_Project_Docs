@@ -24,7 +24,7 @@ export function CodeSnippet({ code, language = "bash", inline = false }: CodeSni
 
   if (inline) {
     return (
-      <code className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs font-bold text-sky-800 border border-slate-200 shadow-2xs">
+      <code className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs font-bold text-sky-800 border border-slate-200 shadow-2xs break-words break-all">
         {code}
       </code>
     );

@@ -268,13 +268,13 @@ function ExamsContent() {
 
         <main className="pt-20 px-4 sm:px-6 lg:px-8 py-8 space-y-6 max-w-6xl mx-auto">
           {/* Exam Header with Countdown Timer & Actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-sky-100 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-sky-100 pb-3 sm:pb-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[10px] font-mono font-bold text-indigo-700 border border-indigo-200">
                   TIMED EXAM ENGINE
                 </span>
-                <span className="text-xs text-slate-600 font-semibold">{session.title}</span>
+                <span className="text-xs text-slate-700 font-semibold truncate max-w-[200px] sm:max-w-none">{session.title}</span>
               </div>
               <p className="text-xs text-slate-500 font-medium">
                 Question {currentIndex + 1} of {questions.length} • {answeredCount} Answered •{" "}
@@ -282,10 +282,10 @@ function ExamsContent() {
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-4 w-full sm:w-auto">
               {/* Timer Pill */}
               <div
-                className={`flex items-center gap-2 rounded-xl border px-3.5 py-1.5 font-mono text-sm font-bold shadow-sm ${
+                className={`flex items-center gap-1.5 sm:gap-2 rounded-xl border px-3 sm:px-3.5 py-1.5 font-mono text-xs sm:text-sm font-bold shadow-sm ${
                   isUrgent
                     ? "border-rose-300 bg-rose-50 text-rose-700 animate-pulse"
                     : "border-slate-200 bg-white text-slate-800"
@@ -299,7 +299,7 @@ function ExamsContent() {
               <button
                 type="button"
                 onClick={() => setShowSubmitModal(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/25 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs font-semibold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/25 transition-all cursor-pointer"
               >
                 <Send className="h-3.5 w-3.5" />
                 <span>Submit Exam</span>
@@ -354,56 +354,56 @@ function ExamsContent() {
               />
 
               {/* Bottom Next/Prev Bar */}
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
                   disabled={currentIndex === 0}
-                  className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 transition-all shadow-sm"
+                  className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-slate-200 bg-white px-3 sm:px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 transition-all shadow-sm shrink-0"
                 >
-                  <ArrowLeft className="h-4 w-4" /> Previous
+                  <ArrowLeft className="h-4 w-4" /> <span className="hidden xs:inline sm:inline">Previous</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleToggleFlag}
-                  className={`flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all shadow-sm ${
+                  className={`flex items-center gap-1 sm:gap-1.5 rounded-xl border px-2.5 sm:px-3.5 py-2 text-xs font-semibold transition-all shadow-sm ${
                     currentQ.isFlagged
                       ? "border-amber-300 bg-amber-50 text-amber-800"
                       : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   }`}
                 >
                   <Flag className={`h-3.5 w-3.5 ${currentQ.isFlagged ? "fill-amber-500 text-amber-500" : ""}`} />
-                  <span>{currentQ.isFlagged ? "Marked for Review" : "Flag for Review"}</span>
+                  <span>{currentQ.isFlagged ? "Flagged" : "Flag"}</span>
                 </button>
 
                 {currentIndex < questions.length - 1 ? (
                   <button
                     type="button"
                     onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
-                    className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-5 py-2 text-xs font-semibold text-white hover:from-sky-600 hover:to-indigo-700 shadow-md shadow-sky-500/25 transition-all"
+                    className="flex items-center gap-1 sm:gap-1.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-4 sm:px-5 py-2 text-xs font-semibold text-white hover:from-sky-600 hover:to-indigo-700 shadow-md shadow-sky-500/25 transition-all shrink-0"
                   >
-                    Next <ArrowRight className="h-4 w-4" />
+                    <span>Next</span> <ArrowRight className="h-4 w-4" />
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setShowSubmitModal(true)}
-                    className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-semibold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/25 transition-all"
+                    className="flex items-center gap-1 sm:gap-1.5 rounded-xl bg-emerald-600 px-3.5 sm:px-5 py-2 text-xs font-semibold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/25 transition-all shrink-0"
                   >
-                    Review &amp; Submit <Send className="h-3.5 w-3.5" />
+                    <span>Submit</span> <Send className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
             </div>
 
             {/* Question Matrix Jump Grid (1 Col) */}
-            <div className="rounded-2xl border border-sky-100 bg-white/95 p-5 shadow-lg shadow-sky-100/60 space-y-4">
+            <div className="rounded-2xl border border-sky-100 bg-white/95 p-4 sm:p-5 shadow-lg shadow-sky-100/60 space-y-4">
               <span className="block text-xs font-bold uppercase tracking-wider text-slate-600">
                 Question Navigator
               </span>
 
-              <div className="grid grid-cols-5 gap-1.5">
+              <div className="grid grid-cols-5 xs:grid-cols-6 sm:grid-cols-5 gap-1.5 max-h-56 sm:max-h-none overflow-y-auto p-1">
                 {questions.map((q, idx) => {
                   const isCurrent = idx === currentIndex;
                   const isAnswered = !!q.selectedOptionKey;

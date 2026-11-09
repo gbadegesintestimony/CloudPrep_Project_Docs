@@ -83,10 +83,10 @@ export function QuestionCard({
   };
 
   return (
-    <div className="rounded-2xl border border-sky-100 bg-white/95 p-5 sm:p-7 shadow-lg shadow-sky-100/60 space-y-6 text-slate-900">
+    <div className="rounded-2xl border border-sky-100 bg-white/95 p-4 sm:p-6 lg:p-7 shadow-lg shadow-sky-100/60 space-y-5 sm:space-y-6 text-slate-900 overflow-hidden">
       {/* Question Header & Meta */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-100 pb-3 sm:pb-4">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <span className="text-xs font-bold text-slate-500 font-mono">
             Q{currentIndex + 1} of {totalQuestions}
           </span>
@@ -101,7 +101,7 @@ export function QuestionCard({
             {question.difficulty}
           </span>
           {question.sourceReference && (
-            <span className="rounded-full bg-slate-50 px-2.5 py-0.5 text-[10px] font-mono text-slate-500 border border-slate-200 truncate max-w-[260px]">
+            <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-mono text-slate-500 border border-slate-200 truncate max-w-[140px] sm:max-w-[260px]">
               {question.sourceReference}
             </span>
           )}
@@ -179,7 +179,7 @@ export function QuestionCard({
                 type="button"
                 onClick={() => !showFeedback && onSelectOption?.(option.key)}
                 disabled={showFeedback && !isReviewMode}
-                className={`w-full flex items-start gap-3.5 rounded-xl border p-3.5 sm:p-4 text-left transition-all ${optionStyle}`}
+                className={`w-full flex items-start gap-3 rounded-xl border p-3 sm:p-4 text-left transition-all ${optionStyle}`}
               >
                 <div
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-xs font-bold transition-all ${badgeStyle}`}
@@ -193,14 +193,14 @@ export function QuestionCard({
                   )}
                 </div>
 
-                <div className="flex-1 text-xs sm:text-sm font-semibold text-slate-900 leading-relaxed pt-0.5">
+                <div className="flex-1 text-xs sm:text-sm font-semibold text-slate-900 leading-relaxed pt-0.5 break-words min-w-0">
                   <FormattedStem text={option.text} />
                 </div>
               </button>
 
               {/* Distractor Rationale (Shown on incorrect option in Feedback mode) */}
               {showFeedback && option.distractorRationale && (
-                <div className="ml-10 text-[11px] text-slate-600 bg-slate-100 border-l-2 border-slate-300 px-3 py-1.5 rounded-r-lg">
+                <div className="ml-0 sm:ml-10 text-[11px] text-slate-600 bg-slate-100 border-l-2 border-slate-300 px-3 py-1.5 rounded-r-lg">
                   <span className="font-semibold text-slate-800">Why {option.key} is incorrect: </span>
                   {option.distractorRationale}
                 </div>

@@ -101,20 +101,20 @@ export function LearnerNav() {
         </div>
 
         {/* Right Action Buttons */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
           <Link
             href="/practice"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-3.5 py-2 text-xs font-bold text-white hover:from-sky-600 hover:to-indigo-700 shadow-md shadow-sky-500/20 transition-all"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-3.5 py-2 text-xs font-bold text-white hover:from-sky-600 hover:to-indigo-700 shadow-md shadow-sky-500/20 transition-all"
           >
             <BookOpen className="h-3.5 w-3.5" />
             <span>Start Practice</span>
           </Link>
           <Link
             href="/exams"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50/70 hover:bg-sky-100 px-3.5 py-2 text-xs font-bold text-sky-800 transition-all shadow-xs"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50/70 hover:bg-sky-100 px-2.5 sm:px-3.5 py-2 text-xs font-bold text-sky-800 transition-all shadow-xs"
           >
-            <GraduationCap className="h-3.5 w-3.5 text-sky-600" />
-            <span>Mock Exams</span>
+            <GraduationCap className="h-4 w-4 text-sky-600" />
+            <span className="hidden xs:inline">Mock Exams</span>
           </Link>
         </div>
       </header>
