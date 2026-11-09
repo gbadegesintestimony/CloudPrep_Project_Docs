@@ -4,15 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
 	"cloudprep-backend/internal/models"
-)
-
-var (
-	reItalicsAsterisks = regexp.MustCompile(`\*([a-zA-Z0-9_](?:[a-zA-Z0-9_\- ]*[a-zA-Z0-9_])?)\*`)
 )
 
 // ConceptFact represents a core curriculum concept/term grounded in a specific course slide deck.
@@ -92,9 +87,6 @@ func stripMarkdown(s string) string {
 	s = strings.TrimPrefix(s, "> ")
 	s = strings.TrimPrefix(s, "# ")
 
-	// Strip italic asterisks wrapping words (*word* -> word)
-	s = reItalicsAsterisks.ReplaceAllString(s, "$1")
-
 	// If multiline snippet (e.g. bash scripts), convert newlines to proper command separators ';'
 	lines := strings.Split(s, "\n")
 	cleanLines := make([]string, 0, len(lines))
@@ -140,8 +132,68 @@ func cleanSentence(s string) string {
 	return s
 }
 
+func cleanShortDefinition(s string) string {
+	s = stripMarkdown(s)
+	s = strings.TrimSpace(s)
+	// If it contains a semicolon, take the primary clause
+	if idx := strings.Index(s, ";"); idx != -1 {
+		s = s[:idx]
+	}
+	// If it contains multiple sentences, take the first sentence
+	if idx := strings.Index(s, ". "); idx != -1 {
+		s = s[:idx]
+	}
+	s = strings.TrimSpace(s)
+	if !strings.HasSuffix(s, ".") && !strings.HasSuffix(s, "?") && !strings.HasSuffix(s, "!") {
+		s += "."
+	}
+	return s
+}
+
+func cleanShortSentence(s string) string {
+	s = stripMarkdown(s)
+	s = strings.TrimSpace(s)
+	if idx := strings.Index(s, ";"); idx != -1 {
+		s = s[:idx]
+	}
+	if idx := strings.Index(s, ". "); idx != -1 {
+		s = s[:idx]
+	}
+	s = strings.TrimSpace(s)
+	if !strings.HasSuffix(s, ".") && !strings.HasSuffix(s, "?") && !strings.HasSuffix(s, "!") {
+		s += "."
+	}
+	return s
+}
+
+func cleanShortCommand(s string) string {
+	s = stripMarkdown(s)
+	// If command is chained with &&, take the primary command
+	if idx := strings.Index(s, " && "); idx != -1 {
+		s = s[:idx]
+	}
+	// If multiline, take the first valid command line
+	if strings.Contains(s, "\n") {
+		lines := strings.Split(s, "\n")
+		for _, l := range lines {
+			trimmed := strings.TrimSpace(l)
+			if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+				s = trimmed
+				break
+			}
+		}
+	}
+	return strings.TrimSpace(s)
+}
+
 func cleanPurpose(s string) string {
 	s = stripMarkdown(s)
+	s = strings.ReplaceAll(s, "by creating a new inverse commit", "without rewriting history")
+	s = strings.ReplaceAll(s, "lexicographical character comparison", "string comparison")
+	s = strings.ReplaceAll(s, "In-memory kernel pipe buffer", "standard stream piping")
+	if idx := strings.Index(s, ";"); idx != -1 {
+		s = s[:idx]
+	}
 	s = strings.TrimSpace(s)
 	if len(s) > 0 {
 		first := strings.ToLower(string(s[0]))
@@ -158,6 +210,9 @@ func cleanOutput(s string) string {
 
 func cleanTrait(s string) string {
 	s = stripMarkdown(s)
+	if idx := strings.Index(s, ";"); idx != -1 {
+		s = s[:idx]
+	}
 	s = strings.TrimSpace(s)
 	if len(s) > 0 {
 		first := strings.ToLower(string(s[0]))
@@ -232,51 +287,57 @@ func BuildTopicQuestions(bp TopicBlueprint, now time.Time) []models.Question {
 
 	// 1. Build 31 DEFINITION questions using 4 distinct angles over bp.Concepts
 	defTemplates := []func(c, d1, d2, d3 ConceptFact, idx int) (string, string, string, [3]struct{ Text, Rationale string }){
-		// Angle 0: Direct definition of Term
+		// Angle 0: Direct definition of Term (concise 1-line options)
 		func(c, d1, d2, d3 ConceptFact, idx int) (string, string, string, [3]struct{ Text, Rationale string }) {
-			stem := fmt.Sprintf("What is the primary function of %s?", cleanTerm(c.Term))
-			correct := cleanSentence(c.Definition)
-			explanation := fmt.Sprintf("%s is defined as: %s Key mechanism: %s.", cleanTerm(c.Term), cleanSentence(c.Definition), cleanSentence(c.KeyMechanism))
+			term := cleanTerm(c.Term)
+			var stem string
+			if strings.Contains(strings.ToLower(term), " vs ") {
+				stem = fmt.Sprintf("What is the main distinction in %s?", term)
+			} else {
+				stem = fmt.Sprintf("What is the primary function of %s?", term)
+			}
+			correct := cleanShortDefinition(c.Definition)
+			explanation := fmt.Sprintf("%s: %s", term, cleanSentence(c.Definition))
 			distractors := [3]struct{ Text, Rationale string }{
-				{cleanSentence(d1.Definition), fmt.Sprintf("This describes %s, not %s.", cleanTerm(d1.Term), cleanTerm(c.Term))},
-				{cleanSentence(d2.Definition), fmt.Sprintf("This defines %s rather than %s.", cleanTerm(d2.Term), cleanTerm(c.Term))},
-				{cleanSentence(d3.Definition), fmt.Sprintf("This refers to %s.", cleanTerm(d3.Term))},
+				{cleanShortDefinition(d1.Definition), fmt.Sprintf("This describes %s.", cleanTerm(d1.Term))},
+				{cleanShortDefinition(d2.Definition), fmt.Sprintf("This defines %s.", cleanTerm(d2.Term))},
+				{cleanShortDefinition(d3.Definition), fmt.Sprintf("This refers to %s.", cleanTerm(d3.Term))},
 			}
 			return stem, correct, explanation, distractors
 		},
 		// Angle 1: Identify Term from its clear plain-text definition
 		func(c, d1, d2, d3 ConceptFact, idx int) (string, string, string, [3]struct{ Text, Rationale string }) {
-			stem := fmt.Sprintf("Which concept matches this description: %s", cleanSentence(c.Definition))
+			stem := fmt.Sprintf("Which concept matches this description: %s", cleanShortDefinition(c.Definition))
 			correct := cleanTerm(c.Term)
-			explanation := fmt.Sprintf("%s matches this description: %s (Mechanism: %s).", cleanTerm(c.Term), cleanSentence(c.Definition), cleanSentence(c.KeyMechanism))
+			explanation := fmt.Sprintf("%s matches this description: %s", cleanTerm(c.Term), cleanSentence(c.Definition))
 			distractors := [3]struct{ Text, Rationale string }{
-				{cleanTerm(d1.Term), fmt.Sprintf("%s serves a different purpose: %s.", cleanTerm(d1.Term), cleanSentence(d1.Definition))},
-				{cleanTerm(d2.Term), fmt.Sprintf("%s is incorrect; its role is: %s.", cleanTerm(d2.Term), cleanSentence(d2.Definition))},
-				{cleanTerm(d3.Term), fmt.Sprintf("%s is incorrect; it is used for: %s.", cleanTerm(d3.Term), cleanSentence(d3.Definition))},
+				{cleanTerm(d1.Term), fmt.Sprintf("%s serves a different purpose.", cleanTerm(d1.Term))},
+				{cleanTerm(d2.Term), fmt.Sprintf("%s is incorrect.", cleanTerm(d2.Term))},
+				{cleanTerm(d3.Term), fmt.Sprintf("%s is unrelated.", cleanTerm(d3.Term))},
 			}
 			return stem, correct, explanation, distractors
 		},
 		// Angle 2: Practical workflow task matching (clean, friendly concept identification)
 		func(c, d1, d2, d3 ConceptFact, idx int) (string, string, string, [3]struct{ Text, Rationale string }) {
-			stem := fmt.Sprintf("Which tool or concept is commonly used for: %s?", cleanSentence(c.ExampleUse))
+			stem := fmt.Sprintf("Which tool or concept is commonly used for: %s?", cleanShortSentence(c.ExampleUse))
 			correct := cleanTerm(c.Term)
-			explanation := fmt.Sprintf("%s is commonly used for this task: %s.", cleanTerm(c.Term), cleanSentence(c.ExampleUse))
+			explanation := fmt.Sprintf("%s is commonly used for this task: %s", cleanTerm(c.Term), cleanSentence(c.ExampleUse))
 			distractors := [3]struct{ Text, Rationale string }{
-				{cleanTerm(d1.Term), fmt.Sprintf("%s is used for: %s.", cleanTerm(d1.Term), cleanSentence(d1.ExampleUse))},
-				{cleanTerm(d2.Term), fmt.Sprintf("%s is used for: %s.", cleanTerm(d2.Term), cleanSentence(d2.ExampleUse))},
-				{cleanTerm(d3.Term), fmt.Sprintf("%s is used for: %s.", cleanTerm(d3.Term), cleanSentence(d3.ExampleUse))},
+				{cleanTerm(d1.Term), fmt.Sprintf("%s is used differently.", cleanTerm(d1.Term))},
+				{cleanTerm(d2.Term), fmt.Sprintf("%s is not used for this.", cleanTerm(d2.Term))},
+				{cleanTerm(d3.Term), fmt.Sprintf("%s is unrelated.", cleanTerm(d3.Term))},
 			}
 			return stem, correct, explanation, distractors
 		},
 		// Angle 3: Practical implementation & use case
 		func(c, d1, d2, d3 ConceptFact, idx int) (string, string, string, [3]struct{ Text, Rationale string }) {
 			stem := fmt.Sprintf("In cloud and DevOps environments, what is %s commonly used for?", cleanTerm(c.Term))
-			correct := cleanSentence(c.ExampleUse)
-			explanation := fmt.Sprintf("%s is used for: %s.", cleanTerm(c.Term), cleanSentence(c.ExampleUse))
+			correct := cleanShortSentence(c.ExampleUse)
+			explanation := fmt.Sprintf("%s is used for: %s", cleanTerm(c.Term), cleanSentence(c.ExampleUse))
 			distractors := [3]struct{ Text, Rationale string }{
-				{cleanSentence(d1.ExampleUse), fmt.Sprintf("This applies to %s rather than %s.", cleanTerm(d1.Term), cleanTerm(c.Term))},
-				{cleanSentence(d2.ExampleUse), fmt.Sprintf("This applies to %s rather than %s.", cleanTerm(d2.Term), cleanTerm(c.Term))},
-				{cleanSentence(d3.ExampleUse), fmt.Sprintf("This describes %s.", cleanTerm(d3.Term))},
+				{cleanShortSentence(d1.ExampleUse), fmt.Sprintf("This applies to %s.", cleanTerm(d1.Term))},
+				{cleanShortSentence(d2.ExampleUse), fmt.Sprintf("This describes %s.", cleanTerm(d2.Term))},
+				{cleanShortSentence(d3.ExampleUse), fmt.Sprintf("This refers to %s.", cleanTerm(d3.Term))},
 			}
 			return stem, correct, explanation, distractors
 		},
@@ -319,51 +380,51 @@ func BuildTopicQuestions(bp TopicBlueprint, now time.Time) []models.Question {
 
 	// 2. Build 26 COMMAND_SYNTAX questions using 4 distinct angles over bp.Commands
 	cmdTemplates := []func(cmd, d1, d2, d3 CommandFact, idx int) (string, string, string, [3]struct{ Text, Rationale string }){
-		// Angle 0: Select the exact command/syntax for a task
+		// Angle 0: Select the exact command/syntax for a task (single clean commands)
 		func(cmd, d1, d2, d3 CommandFact, idx int) (string, string, string, [3]struct{ Text, Rationale string }) {
 			stem := fmt.Sprintf("Which command is used to %s?", cleanPurpose(cmd.Purpose))
-			correct := stripMarkdown(cmd.CommandOrSyn)
-			explanation := fmt.Sprintf("The command %s is used to %s.", stripMarkdown(cmd.CommandOrSyn), cleanPurpose(cmd.Purpose))
+			correct := cleanShortCommand(cmd.CommandOrSyn)
+			explanation := fmt.Sprintf("The command %s is used to %s.", correct, cleanPurpose(cmd.Purpose))
 			distractors := [3]struct{ Text, Rationale string }{
-				{stripMarkdown(cmd.WrongFlagAlt), cleanSentence(cmd.WrongWhy)},
-				{stripMarkdown(d1.CommandOrSyn), fmt.Sprintf("%s is used to %s.", stripMarkdown(d1.CommandOrSyn), cleanPurpose(d1.Purpose))},
-				{stripMarkdown(d2.CommandOrSyn), fmt.Sprintf("%s is used to %s.", stripMarkdown(d2.CommandOrSyn), cleanPurpose(d2.Purpose))},
+				{cleanShortCommand(cmd.WrongFlagAlt), cleanSentence(cmd.WrongWhy)},
+				{cleanShortCommand(d1.CommandOrSyn), fmt.Sprintf("%s is used to %s.", cleanShortCommand(d1.CommandOrSyn), cleanPurpose(d1.Purpose))},
+				{cleanShortCommand(d2.CommandOrSyn), fmt.Sprintf("%s is used to %s.", cleanShortCommand(d2.CommandOrSyn), cleanPurpose(d2.Purpose))},
 			}
 			return stem, correct, explanation, distractors
 		},
 		// Angle 1: Interpret the behavior/output of a command
 		func(cmd, d1, d2, d3 CommandFact, idx int) (string, string, string, [3]struct{ Text, Rationale string }) {
-			stem := fmt.Sprintf("What is the command %s used for?", stripMarkdown(cmd.CommandOrSyn))
-			correct := cleanSentence(cmd.Purpose)
-			explanation := fmt.Sprintf("Running %s accomplishes: %s (%s).", stripMarkdown(cmd.CommandOrSyn), cleanSentence(cmd.Purpose), cleanSentence(cmd.OutputOrBhvr))
+			stem := fmt.Sprintf("What is the command %s used for?", cleanShortCommand(cmd.CommandOrSyn))
+			correct := cleanShortSentence(cmd.Purpose)
+			explanation := fmt.Sprintf("Running %s accomplishes: %s.", cleanShortCommand(cmd.CommandOrSyn), cleanSentence(cmd.Purpose))
 			distractors := [3]struct{ Text, Rationale string }{
-				{cleanSentence(d1.Purpose), fmt.Sprintf("This describes the role of %s.", stripMarkdown(d1.CommandOrSyn))},
-				{cleanSentence(d2.Purpose), fmt.Sprintf("This describes the role of %s.", stripMarkdown(d2.CommandOrSyn))},
-				{cleanSentence(d3.Purpose), fmt.Sprintf("This describes the role of %s.", stripMarkdown(d3.CommandOrSyn))},
+				{cleanShortSentence(d1.Purpose), fmt.Sprintf("This describes %s.", cleanShortCommand(d1.CommandOrSyn))},
+				{cleanShortSentence(d2.Purpose), fmt.Sprintf("This describes %s.", cleanShortCommand(d2.CommandOrSyn))},
+				{cleanShortSentence(d3.Purpose), fmt.Sprintf("This describes %s.", cleanShortCommand(d3.CommandOrSyn))},
 			}
 			return stem, correct, explanation, distractors
 		},
 		// Angle 2: Diagnose why an incorrect syntax fails and select the correct replacement
 		func(cmd, d1, d2, d3 CommandFact, idx int) (string, string, string, [3]struct{ Text, Rationale string }) {
 			stem := fmt.Sprintf("Which command is the correct syntax to %s?", cleanPurpose(cmd.Purpose))
-			correct := stripMarkdown(cmd.CommandOrSyn)
-			explanation := fmt.Sprintf("%s is the standard syntax to %s.", stripMarkdown(cmd.CommandOrSyn), cleanPurpose(cmd.Purpose))
+			correct := cleanShortCommand(cmd.CommandOrSyn)
+			explanation := fmt.Sprintf("%s is the standard syntax to %s.", correct, cleanPurpose(cmd.Purpose))
 			distractors := [3]struct{ Text, Rationale string }{
-				{stripMarkdown(cmd.WrongFlagAlt), cleanSentence(cmd.WrongWhy)},
-				{stripMarkdown(d1.CommandOrSyn), fmt.Sprintf("%s is used to %s.", stripMarkdown(d1.CommandOrSyn), cleanPurpose(d1.Purpose))},
-				{stripMarkdown(d2.CommandOrSyn), fmt.Sprintf("%s is used to %s.", stripMarkdown(d2.CommandOrSyn), cleanPurpose(d2.Purpose))},
+				{cleanShortCommand(cmd.WrongFlagAlt), cleanSentence(cmd.WrongWhy)},
+				{cleanShortCommand(d1.CommandOrSyn), fmt.Sprintf("%s is used to %s.", cleanShortCommand(d1.CommandOrSyn), cleanPurpose(d1.Purpose))},
+				{cleanShortCommand(d2.CommandOrSyn), fmt.Sprintf("%s is used to %s.", cleanShortCommand(d2.CommandOrSyn), cleanPurpose(d2.Purpose))},
 			}
 			return stem, correct, explanation, distractors
 		},
-		// Angle 3: Match expected runtime behavior/output back to the exact command (clean, no blockquotes)
+		// Angle 3: Match expected runtime behavior/output back to the exact command
 		func(cmd, d1, d2, d3 CommandFact, idx int) (string, string, string, [3]struct{ Text, Rationale string }) {
-			stem := fmt.Sprintf("Which command produces this outcome: %s?", cleanSentence(cmd.OutputOrBhvr))
-			correct := stripMarkdown(cmd.CommandOrSyn)
-			explanation := fmt.Sprintf("%s produces this outcome: %s (%s).", stripMarkdown(cmd.CommandOrSyn), cleanSentence(cmd.OutputOrBhvr), cleanPurpose(cmd.Purpose))
+			stem := fmt.Sprintf("Which command produces this outcome: %s?", cleanShortSentence(cmd.OutputOrBhvr))
+			correct := cleanShortCommand(cmd.CommandOrSyn)
+			explanation := fmt.Sprintf("%s produces this outcome: %s.", correct, cleanShortSentence(cmd.OutputOrBhvr))
 			distractors := [3]struct{ Text, Rationale string }{
-				{stripMarkdown(cmd.WrongFlagAlt), cleanSentence(cmd.WrongWhy)},
-				{stripMarkdown(d1.CommandOrSyn), fmt.Sprintf("%s produces: %s.", stripMarkdown(d1.CommandOrSyn), cleanSentence(d1.OutputOrBhvr))},
-				{stripMarkdown(d3.CommandOrSyn), fmt.Sprintf("%s produces: %s.", stripMarkdown(d3.CommandOrSyn), cleanSentence(d3.OutputOrBhvr))},
+				{cleanShortCommand(cmd.WrongFlagAlt), cleanSentence(cmd.WrongWhy)},
+				{cleanShortCommand(d1.CommandOrSyn), fmt.Sprintf("%s produces: %s.", cleanShortCommand(d1.CommandOrSyn), cleanShortSentence(d1.OutputOrBhvr))},
+				{cleanShortCommand(d3.CommandOrSyn), fmt.Sprintf("%s produces: %s.", cleanShortCommand(d3.CommandOrSyn), cleanShortSentence(d3.OutputOrBhvr))},
 			}
 			return stem, correct, explanation, distractors
 		},
@@ -507,24 +568,24 @@ func BuildTopicQuestions(bp TopicBlueprint, now time.Time) []models.Question {
 		// Angle 1: Practical reason for choice
 		func(s ScenarioCase, idx int) (string, string, string, [3]struct{ Text, Rationale string }) {
 			stem := fmt.Sprintf("%s\n\nThe team decides to use %s.\n\nWhat is the main reason for this choice?", stripMarkdown(s.Context), cleanTerm(s.BestSolution))
-			correct := cleanSentence(s.WhyBest)
-			explanation := fmt.Sprintf("Selecting %s is correct because: %s.", cleanTerm(s.BestSolution), cleanSentence(s.WhyBest))
+			correct := cleanShortSentence(s.WhyBest)
+			explanation := fmt.Sprintf("Selecting %s is correct because: %s", cleanTerm(s.BestSolution), cleanSentence(s.WhyBest))
 			distractors := [3]struct{ Text, Rationale string }{
-				{cleanSentence(s.WhyBad1), fmt.Sprintf("This alternative has drawbacks: %s", cleanSentence(s.WhyBad1))},
-				{cleanSentence(s.WhyBad2), fmt.Sprintf("This alternative is problematic: %s", cleanSentence(s.WhyBad2))},
-				{cleanSentence(s.WhyBad3), fmt.Sprintf("This approach does not fit: %s", cleanSentence(s.WhyBad3))},
+				{cleanShortSentence(s.WhyBad1), fmt.Sprintf("Drawback: %s", cleanShortSentence(s.WhyBad1))},
+				{cleanShortSentence(s.WhyBad2), fmt.Sprintf("Drawback: %s", cleanShortSentence(s.WhyBad2))},
+				{cleanShortSentence(s.WhyBad3), fmt.Sprintf("Drawback: %s", cleanShortSentence(s.WhyBad3))},
 			}
 			return stem, correct, explanation, distractors
 		},
 		// Angle 2: Why an alternative is not recommended
 		func(s ScenarioCase, idx int) (string, string, string, [3]struct{ Text, Rationale string }) {
 			stem := fmt.Sprintf("%s\n\nA colleague suggests using %s to %s.\n\nWhy is this not the recommended approach?", stripMarkdown(s.Context), cleanTerm(s.BadAlternative1), cleanPurpose(s.Requirement))
-			correct := cleanSentence(s.WhyBad1)
-			explanation := fmt.Sprintf("That proposal is not recommended because: %s. The preferred solution is %s (%s).", cleanSentence(s.WhyBad1), cleanTerm(s.BestSolution), cleanSentence(s.WhyBest))
+			correct := cleanShortSentence(s.WhyBad1)
+			explanation := fmt.Sprintf("That proposal is not recommended because: %s The preferred solution is %s.", cleanSentence(s.WhyBad1), cleanTerm(s.BestSolution))
 			distractors := [3]struct{ Text, Rationale string }{
-				{cleanSentence(s.WhyBad2), "This applies to a different scenario."},
-				{cleanSentence(s.WhyBad3), "This is an unrelated concern."},
-				{"It introduces unnecessary complexity without solving the problem.", "This approach does not meet cloud engineering best practices."},
+				{cleanShortSentence(s.WhyBad2), "This applies to a different concern."},
+				{cleanShortSentence(s.WhyBad3), "This is an unrelated limitation."},
+				{"It introduces unnecessary operational overhead.", "This approach does not meet cloud engineering best practices."},
 			}
 			return stem, correct, explanation, distractors
 		},
@@ -532,10 +593,10 @@ func BuildTopicQuestions(bp TopicBlueprint, now time.Time) []models.Question {
 		func(s ScenarioCase, idx int) (string, string, string, [3]struct{ Text, Rationale string }) {
 			stem := fmt.Sprintf("%s\n\nAn attempt with %s failed. What is the recommended solution to %s?", stripMarkdown(s.Context), cleanTerm(s.BadAlternative2), cleanPurpose(s.Requirement))
 			correct := cleanTerm(s.BestSolution)
-			explanation := fmt.Sprintf("Using %s resolves this issue: %s.", cleanTerm(s.BestSolution), cleanSentence(s.WhyBest))
+			explanation := fmt.Sprintf("Using %s resolves this issue: %s", cleanTerm(s.BestSolution), cleanSentence(s.WhyBest))
 			distractors := [3]struct{ Text, Rationale string }{
-				{cleanTerm(s.BadAlternative1), cleanSentence(s.WhyBad1)},
-				{cleanTerm(s.BadAlternative3), cleanSentence(s.WhyBad3)},
+				{cleanTerm(s.BadAlternative1), cleanShortSentence(s.WhyBad1)},
+				{cleanTerm(s.BadAlternative3), cleanShortSentence(s.WhyBad3)},
 				{"Disable monitoring and alerts to ignore the failure.", "Ignoring failures leads to unmonitored outages."},
 			}
 			return stem, correct, explanation, distractors
