@@ -4,10 +4,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
 	"cloudprep-backend/internal/models"
+)
+
+var (
+	reItalicsAsterisks = regexp.MustCompile(`\*([a-zA-Z0-9_](?:[a-zA-Z0-9_\- ]*[a-zA-Z0-9_])?)\*`)
 )
 
 // ConceptFact represents a core curriculum concept/term grounded in a specific course slide deck.
@@ -86,6 +91,9 @@ func stripMarkdown(s string) string {
 	s = strings.TrimPrefix(s, "* ")
 	s = strings.TrimPrefix(s, "> ")
 	s = strings.TrimPrefix(s, "# ")
+
+	// Strip italic asterisks wrapping words (*word* -> word)
+	s = reItalicsAsterisks.ReplaceAllString(s, "$1")
 
 	// If multiline snippet (e.g. bash scripts), convert newlines to proper command separators ';'
 	lines := strings.Split(s, "\n")

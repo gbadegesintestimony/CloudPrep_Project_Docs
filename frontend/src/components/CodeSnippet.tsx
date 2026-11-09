@@ -80,15 +80,15 @@ function cleanStem(raw: string): string {
   s = s.replace(/An architecture review in \d+\.?\s*[^ ]+\s+evaluates/gi, "An architecture team evaluates");
 
   // Format clustered numbering (1) ... (2) ... into clean separated bullet lines
-  s = s.replace(/\s*\(1\)\s*/g, "\n\n• **1.** ");
-  s = s.replace(/,?\s*(?:and\s*)?\(2\)\s*/g, "\n• **2.** ");
-  s = s.replace(/,?\s*(?:and\s*)?\(3\)\s*/g, "\n• **3.** ");
-  s = s.replace(/,?\s*(?:and\s*)?\(4\)\s*/g, "\n• **4.** ");
+  s = s.replace(/\s*\(1\)\s*/g, "\n\n• 1. ");
+  s = s.replace(/,?\s*(?:and\s*)?\(2\)\s*/g, "\n• 2. ");
+  s = s.replace(/,?\s*(?:and\s*)?\(3\)\s*/g, "\n• 3. ");
+  s = s.replace(/,?\s*(?:and\s*)?\(4\)\s*/g, "\n• 4. ");
 
   // Separate scenario requirements, engineering approaches, and the final prompt
-  s = s.replace(/\.?\s*To satisfy \*"([^"]+)"\*,?\s*the engineering team selects:\s*/gi, ".\n\n**Goal:** $1\n\n**Implemented Solution:** ");
-  s = s.replace(/\.?\s*What is the primary technical justification for this choice\?/gi, "\n\n**Question:** What is the primary technical justification for this choice?");
-  s = s.replace(/\.?\s*(Which solution (?:best satisfies|meets|achieves)[^?]*\?)/gi, "\n\n**Question:** $1");
+  s = s.replace(/\.?\s*To satisfy \*"?([^"]+)"?\*,?\s*the engineering team selects:\s*/gi, ".\n\nGoal: $1\n\nImplemented Solution: ");
+  s = s.replace(/\.?\s*What is the primary technical justification for this choice\?/gi, "\n\nQuestion: What is the primary technical justification for this choice?");
+  s = s.replace(/\.?\s*(Which solution (?:best satisfies|meets|achieves)[^?]*\?)/gi, "\n\nQuestion: $1");
 
   return s.trim();
 }
@@ -102,7 +102,7 @@ export function FormattedStem({ text }: { text: string }) {
   if (cleanedText.includes("```")) {
     const parts = cleanedText.split(/(```[\s\S]*?```)/g);
     return (
-      <div className="space-y-3 text-sm sm:text-base leading-relaxed text-slate-900 font-medium">
+      <div className="space-y-3 text-sm sm:text-base leading-relaxed font-medium">
         {parts.map((part, index) => {
           if (part.startsWith("```") && part.endsWith("```")) {
             const lines = part.slice(3, -3).trim().split("\n");
@@ -121,7 +121,7 @@ export function FormattedStem({ text }: { text: string }) {
   }
 
   return (
-    <div className="space-y-2.5 text-sm sm:text-base leading-relaxed text-slate-900 font-medium">
+    <div className="space-y-2.5 text-sm sm:text-base leading-relaxed font-medium">
       <FormattedParagraphs text={cleanedText} />
     </div>
   );
@@ -139,8 +139,8 @@ function FormattedParagraphs({ text }: { text: string }) {
               const trimmed = line.trim();
               if (trimmed.startsWith("• ")) {
                 return (
-                  <div key={li} className="flex items-start gap-2 pl-3 py-1 text-slate-800 bg-sky-50/60 rounded-lg border border-sky-100 my-1">
-                    <span className="text-sky-600 font-bold">•</span>
+                  <div key={li} className="flex items-start gap-2 pl-3 py-1 bg-sky-50/60 dark:bg-slate-800/60 rounded-lg border border-sky-100 dark:border-slate-700 my-1">
+                    <span className="text-sky-600 dark:text-emerald-400 font-bold">•</span>
                     <div className="flex-1">
                       <FormattedInlineText text={trimmed.slice(2)} />
                     </div>
@@ -161,32 +161,22 @@ function FormattedParagraphs({ text }: { text: string }) {
 }
 
 function FormattedInlineText({ text }: { text: string }) {
-  const parts = text.split(/(`[^`]+`)/g);
+  if (!text) return null;
+  // Clean all stray markdown artifacts and asterisks
+  const sanitized = text
+    .replace(/\*\*/g, "")
+    .replace(/\*\"/g, '"')
+    .replace(/\"\*/g, '"')
+    .replace(/\*([a-zA-Z0-9_\- /]+)\*/g, "$1");
+
+  const parts = sanitized.split(/(`[^`]+`)/g);
   return (
     <span>
       {parts.map((p, i) => {
         if (p.startsWith("`") && p.endsWith("`") && p.length > 2) {
           return <CodeSnippet key={i} code={p.slice(1, -1)} inline />;
         }
-        // Handle bold markdown **text**
-        if (p.includes("**")) {
-          const boldParts = p.split(/(\*\*[^*]+\*\*)/g);
-          return (
-            <span key={i}>
-              {boldParts.map((bp, bi) => {
-                if (bp.startsWith("**") && bp.endsWith("**") && bp.length > 4) {
-                  return (
-                    <strong key={bi} className="font-extrabold text-slate-900">
-                      {bp.slice(2, -2)}
-                    </strong>
-                  );
-                }
-                return bp;
-              })}
-            </span>
-          );
-        }
-        return p;
+        return <span key={i}>{p}</span>;
       })}
     </span>
   );
