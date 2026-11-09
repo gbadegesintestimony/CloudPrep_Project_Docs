@@ -1,0 +1,14 @@
+# Environment & Secrets
+.env
+*.env
+
+# SQLite local DB
+*.db
+*.db-journal
+*.db-wal
+cloudprep.db
+
+# Binaries
+*.exe
+*.test
+

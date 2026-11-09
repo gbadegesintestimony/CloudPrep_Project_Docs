@@ -1,0 +1,25 @@
+name: CloudPrep Render & Supabase Keep-Alive Ping
+
+on:
+  schedule:
+    # Runs every 6 hours to keep Render warm and prevent Supabase Free Tier 7-day inactivity pause
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping CloudPrep Golang/Gin Health & Database Endpoint
+        env:
+          BACKEND_HEALTH_URL: ${{ secrets.BACKEND_HEALTH_URL }}
+        run: |
+          if [ -z "$BACKEND_HEALTH_URL" ]; then
+            echo "BACKEND_HEALTH_URL secret not configured yet; skipping remote ping."
+            exit 0
+          fi
+          echo "Pinging $BACKEND_HEALTH_URL ..."
+          curl --fail --silent --show-error --max-time 60 "$BACKEND_HEALTH_URL"
+          echo ""
+          echo "Health check succeeded — Render and Supabase PostgreSQL active."
+
