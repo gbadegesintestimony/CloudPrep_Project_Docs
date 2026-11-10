@@ -9,27 +9,21 @@ import {
   GitBranch,
   ShieldCheck,
   Sparkles,
-  CheckCircle2,
   BookOpen,
   ArrowRight,
-  GraduationCap,
   Loader2,
   Code2,
 } from "lucide-react";
-import { fetchCurriculum, loginAsGuest, CurriculumResponse, getStoredAccessToken } from "@/lib/api";
+import { loginAsGuest, getStoredAccessToken } from "@/lib/api";
 import { FloatingClouds } from "@/components/FloatingClouds";
 
 export default function LandingPage() {
   const router = useRouter();
-  const [curriculum, setCurriculum] = useState<CurriculumResponse | null>(null);
   const [guestLoading, setGuestLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     setIsLoggedIn(!!getStoredAccessToken());
-    fetchCurriculum()
-      .then(setCurriculum)
-      .catch(() => null);
   }, []);
 
   const handleGuestStart = async () => {
@@ -229,41 +223,6 @@ export default function LandingPage() {
               );
             })}
           </div>
-        </div>
-      </section>
-
-      {/* Curriculum Overview Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-sky-100 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {(curriculum?.topics || []).map((topic) => (
-            <div
-              key={topic.id}
-              className="p-6 rounded-2xl bg-white/90 border border-sky-100/90 shadow-md shadow-sky-50 flex flex-col justify-between hover:border-sky-300 hover:shadow-xl hover:shadow-sky-100/60 transition-all backdrop-blur-xl group"
-            >
-              <div>
-                <div className="flex items-center justify-between gap-2 text-xs text-sky-600 font-mono mb-2">
-                  <span className="bg-sky-50 border border-sky-200/80 px-2.5 py-0.5 rounded-full font-semibold">
-                    {topic.moduleTitle} • {topic.weekCode}
-                  </span>
-                  <span className="text-slate-400 text-[11px] truncate max-w-[180px] font-mono">{topic.sourcePdf}</span>
-                </div>
-                <h3 className="font-display font-bold text-slate-900 text-lg group-hover:text-sky-600 transition-colors">
-                  {topic.title}
-                </h3>
-                <p className="text-xs text-slate-600 mt-2 leading-relaxed font-normal">{topic.description}</p>
-              </div>
-
-              <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-slate-500 inline-flex items-center gap-1.5 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  {topic.objectives?.length || 0} Objectives
-                </span>
-                <span className="font-mono font-bold text-sky-600">
-                  {topic.questionCount || 104} Questions
-                </span>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 
